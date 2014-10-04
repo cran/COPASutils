@@ -17,7 +17,7 @@ setupSummarized2 <- summarizePlate(setupRaw, quantiles=TRUE, log=TRUE, ends=TRUE
 colnames(setupSummarized2)
 
 ## ---------------------------------------------------------------------------------------------------------------------
-setupSummarized3 <- removeWells(setupSummarized, c("A2", "A4", "A6")) # All wells you want to remove need to be included here
+setupSummarized3 <- removeWells(setupSummarized, c("A2", "A4", "A6")) # All wells you want to remove need to be included here as a vector
 head(setupSummarized3[,1:10])
 
 ## ---------------------------------------------------------------------------------------------------------------------

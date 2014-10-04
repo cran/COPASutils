@@ -1,7 +1,8 @@
 # To satisfy R CMD check --as-cran
 if(getRversion() >= "2.15.1")  utils::globalVariables(c(".", "Plate1", "Plate2",
     "Correlation", "strain", "dose", "variable", "value", "label", "TOF", "EXT",
-    "red", "green", "yellow", "norm.EXT", "norm.red", "norm.green", "norm.yellow"))
+    "red", "green", "yellow", "norm.EXT", "norm.red", "norm.green", "norm.yellow",
+    "presentation", "bubbleSVMmodel_noProfiler"))
 
 #' @docType package
 #' @importFrom reshape2 melt
@@ -62,7 +63,7 @@ NULL
 readSorter <- function(file, tofmin=0, tofmax=10000, extmin=0, extmax=10000, reflx=TRUE)  {
     data <- read.delim(file=file, header=T, na.strings=c("n/a"), as.is=T, stringsAsFactors=F)
     if(is.null(data$EXT) & reflx){
-        stop("This file appears to have come from a machine with an LP Sampler, not a reflex module. Please set `reflx` = FALSE and try again.")
+        stop("This file appears to have come from a machine with an LP Sampler, not a ReFLx module. Please set `reflx` = FALSE and try again.")
     }
     data <- data[!is.na(data$TOF),]
     data <- data[,!is.na(data[1,])]
@@ -135,6 +136,10 @@ readPlate <- function(file, tofmin=0, tofmax=10000, extmin=0, extmax=10000, SVM=
 #' @param log if TRUE, columns of log transformed EXT and red fluorescence will be added to output dataframe, defaults to FALSE
 #' @param ends if TRUE, columns of min and max values for all traits will be added to output dataframe, defaults to FALSE
 #' @export
+#' @examples
+#' # exampleStrains <- rep(c("N2", NA), times=48)
+#' # plate1 <- summarizePlate(plateData1, quantiles=TRUE, log=TRUE, ends=TRUE)
+#' # plate2 <- summarizePlate(plateData2, strains=exampleStrains)
 
 summarizePlate <- function(plate, strains=NULL, quantiles=FALSE, log=FALSE, ends=FALSE) {
     plate <- plate[as.character(plate$call50)=="object" | plate$TOF==-1 | is.na(as.character(plate$call50)),]
@@ -325,6 +330,9 @@ summarizePlate <- function(plate, strains=NULL, quantiles=FALSE, log=FALSE, ends
 #' @param badWells a character vector consisting of all wells to remove
 #' @param drop a logical value dictating whether to drop wells from the data frame or set measured values to NA, defaults to FALSE
 #' @export
+#' @examples
+#' # plate <- summarizePlate(plateData1)
+#' # plateWithoutWells <- removeWells(plate=plate, badWells=c("A1", "A2", "A3"))
 
 removeWells <- function(plate, badWells, drop=FALSE) {
     sp.bw <- str_split(badWells, "", 3)
@@ -357,8 +365,20 @@ removeWells <- function(plate, badWells, drop=FALSE) {
 #' @param trait2 the trait which will be the dependent variable for the scatter plot, enter as a string
 #' @param type the type of plot, either "heat" for heatmap, "scatter" for scatter plot, or "hist" for histogram, defaults to "heat"
 #' @export
+#' @examples
+#' #### COPASutils Figures
+#' ### Figure 1a 
+#' #plotTrait(doseData, trait="TOF", trait2="EXT", type="scatter")
+#' 
+#' ### Figure 1b
+#' #plotTrait(doseData, trait="TOF", type="hist")
+#' 
+#' ### Figure 1c
+#' # sumDose <- summarizePlate(doseData)
+#' # plotTrait(sumDose, trait="n", type="heat") 
 
 plotTrait = function(plate, trait, trait2=NULL, type="heat"){
+    plate = data.frame(plate)
     if(type == "heat"){
         plate$label <- ifelse(is.na(plate[,which(colnames(plate)==trait)]), "", plate[,which(colnames(plate)==trait)])
         plot = ggplot(plate) + geom_rect(aes_string(xmin=0,xmax=5,ymin=0,ymax=5,fill=trait)) +
@@ -399,21 +419,28 @@ fillWells = function(plate){
 
 #' Plot a correlation matrix within a plate or between plates
 #' 
-#' Returns a ggplot2 object of a correlation plot for all traits within a single plate or between two plates
-#' @param plate1 one plate to compare in the correlation matrix
-#' @param plate2 an optional plate to compare plate1 to, defaults to plate1, if no argument is entered plate1 will be compared to itself
+#' Returns a ggplot2 object of a correlation plot for all traits within a single plate or between two plates. The data from each plate must be summarized prior to being passed to this function.
+#' @param plate_summary1 one summarized plate to compare in the correlation matrix
+#' @param plate_summary2 an optional summarized plate to compare with plate_summary1, defaults to plate_summary1; if no argument is entered plate_summary1 will be compared to itself
 #' @export
+#' @examples
+#' #### COPASutils Figures
+#' ### Figure 4
+#' # library(dplyr)
+#' # sumDose <- summarizePlate(doseData)
+#' # corDose <- select(sumDose, -n.sorted)
+#' # plotCorMatrix(corDose)
 
-plotCorMatrix = function(plate1, plate2=plate1){
-    plate1 = fillWells(plate1)
-    plate2 = fillWells(plate2)
-    if(nrow(plate1) != 96 | nrow(plate2) != 96){
+plotCorMatrix = function(plate_summary1, plate_summary2=plate_summary1){
+    plate_summary1 = fillWells(plate_summary1)
+    plate_summary2 = fillWells(plate_summary2)
+    if(nrow(plate_summary1) != 96 | nrow(plate_summary2) != 96){
         stop("Both plates must be summarized")
     }
-    if(ncol(plate1) != ncol(plate2)){
+    if(ncol(plate_summary1) != ncol(plate_summary2)){
         stop("Both plates have to have the same number of traits")
     }
-    corDF = melt(cor(plate1[,-(1:2)], plate2[,-(1:2)], use = "complete.obs"))
+    corDF = melt(cor(plate_summary1[,-(1:2)], plate_summary2[,-(1:2)], use = "complete.obs"))
     colnames(corDF) = c("Plate1", "Plate2", "Correlation")
     ggplot(corDF, aes(Plate1, Plate2, fill = Correlation)) + 
         geom_tile() + scale_fill_gradient2("Correlation",low = "blue", high = "red", mid = "green", limits = c(-1,1)) +
@@ -424,17 +451,18 @@ plotCorMatrix = function(plate1, plate2=plate1){
 #' Detect edge effects on 96-well plates
 #' 
 #' Test for an effect of the position of wells in a 96 well plate. This function will split a plate population by edge wells and center wells and test the two populations for significant differences in either a specific trait or all traits if a trait is not specified.
-#' @param plate a summarized and filled plate data frame
+#' @param plate_summary a summarized and filled plate data frame
 #' @param trait a singular trait to test, defaults to NULL and will test all traits
 #' @export
 
-edgeEffect = function(plate, trait=NULL){
-    if(nrow(plate) != 96){
-        stop("Plate must be summarized and filled first")
+edgeEffect = function(plate_summary, trait=NULL){
+    plate_summary = data.frame(plate_summary)
+    if(nrow(plate_summary) != 96){
+        stop("plate_summary must be summarized and filled first")
     }
-    edgeWells = plate[plate$row == "A" | plate$row == "H" | plate$col == 1 | plate$col == 12,-(1:2)]
+    edgeWells = plate_summary[plate_summary$row == "A" | plate_summary$row == "H" | plate_summary$col == 1 | plate_summary$col == 12,-(1:2)]
     edgeWells$pos = "edge"
-    centerWells = plate[!(plate$row == "A" | plate$row == "H" | plate$col == 1 | plate$col == 12),-(1:2)]
+    centerWells = plate_summary[!(plate_summary$row == "A" | plate_summary$row == "H" | plate_summary$col == 1 | plate_summary$col == 12),-(1:2)]
     centerWells$pos = "center"
     total = rbind(edgeWells, centerWells)
     pos = total$pos
@@ -461,6 +489,15 @@ edgeEffect = function(plate, trait=NULL){
 #' @param trait the trait to compare, entered as a string
 #' @param plateNames an optional character vector with the names of the individual plates; if no names are entered, numbers will be used in the order the data frames are entered
 #' @export
+#' @examples
+#' #### COPASutils Figures
+#' ### Figure 3a
+#' # plotCompare(list(doseData, plateData2), "TOF")
+#' 
+#' ### Figure 3b
+#' # sumDose <- summarizePlate(doseData)
+#' # sumPlate <- summarizePlate(plateData2)
+#' # plotCompare(list(sumDose, sumPlate), "n")
 
 plotCompare = function(plates, trait, plateNames=NULL){
     if(!is.null(plateNames) & length(plateNames) != length(plates)){
@@ -489,33 +526,40 @@ plotCompare = function(plates, trait, plateNames=NULL){
 #' Plot a dose response curve by strain across a plate
 #' 
 #' Return a ggplot2 object of a dose response curve by strain across a plate
-#' @param plate the plate data frame to be plotted
+#' @param plate_summary the summarized plate data frame to be plotted
 #' @param dosages a vector of dosages in the plate, entered by row
 #' @param trait the trait to be plotted on the y axis
 #' @export
+#' @examples
+#' #### COPASutils figure
+#' ### Figure 5
+#' # strains <- rep(c("A", "B", "C", "D"), each=6, times=4)
+#' # sumDose <- summarizePlate(doseData, strains=strains)
+#' # dose <- rep(c(1, 5, 10, 15, 20, NA), times=16)
+#' # plotDR(sumDose, "n", dosages=dose)
 
-plotDR = function(plate, dosages, trait="n"){
-    plate = data.frame(cbind(dose = dosages, plate))
-    plate = plate[,-c(3,4)]
-    plate = plate[!is.na(plate$strain)&!is.na(plate$dose),]
-    plate = melt(plate, id=c("strain", "dose"))
-    plate = plate %>% group_by(strain, dose, variable) %>% summarize(mean = mean(value))
-    plate = dcast(plate, strain+dose~variable, value.var="mean")
-    ggplot(plate, aes_string(x="dose", y=trait, colour="strain")) + geom_point() + geom_line() + scale_colour_discrete(name="Strain") + xlab("Dose") + ylab(trait)
+plotDR = function(plate_summary, dosages, trait="n"){
+    plate_summary = data.frame(cbind(dose = dosages, plate_summary))
+    plate_summary = plate_summary[,-c(3,4)]
+    plate_summary = plate_summary[!is.na(plate_summary$strain)&!is.na(plate_summary$dose),]
+    plate_summary = melt(plate_summary, id=c("strain", "dose"))
+    plate_summary = plate_summary %>% group_by(strain, dose, variable) %>% summarize(mean = mean(value))
+    plate_summary = reshape2::dcast(plate_summary, strain+dose~variable, value.var="mean")
+    ggplot(plate_summary, aes_string(x="dose", y=trait, colour="strain")) + geom_point() + geom_line() + scale_colour_discrete(name="Strain") + xlab("Dose") + ylab(trait)
 }
 
 #' Plot dose response curves for all traits
 #' 
 #' Return a list of ggplot2 objects of dose response curves by strain across a plate. Plots for specific traits can be accessed by name from the returned list (i.e. "plots$n" will return the dose response plot for the trait "n").
-#' @param plate the plate data frame to be plotted
+#' @param plate_summary the summarized plate data frame to be plotted
 #' @param dosages a vector of dosages in the plate, entered by row
 #' @export
 
-plotDR_allTraits = function(plate, dosages){
+plotDR_allTraits = function(plate_summary, dosages){
     plots = list()
-    for(trait in colnames(plate)[4:ncol(plate)]){
-        plots = append(plots, list(plotDR(plate, dosages, trait)))
+    for(trait in colnames(plate_summary)[4:ncol(plate_summary)]){
+        plots = append(plots, list(plotDR(plate_summary, dosages, trait)))
     }
-    names(plots) = colnames(plate)[4:ncol(plate)]
+    names(plots) = colnames(plate_summary)[4:ncol(plate_summary)]
     return(plots)
 }
