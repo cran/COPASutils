@@ -352,11 +352,11 @@ head(setupSummarized3[,1:10])
 ## Groups: row
 ## 
 ##   row col  n n.sorted mean.TOF median.TOF mean.EXT median.EXT mean.red median.red
-## 1   A   1 24        3    342.8        341    241.5      230.5    64.92       49.5
+## 1   A   1 24        3 342.7917        341 241.4583      230.5 64.91667       49.5
 ## 2   A   2 NA       NA       NA         NA       NA         NA       NA         NA
-## 3   A   3 70        3    307.2        310    190.9      209.5    62.61       52.0
+## 3   A   3 70        3 307.2143        310 190.8714      209.5 62.61429       52.0
 ## 4   A   4 NA       NA       NA         NA       NA         NA       NA         NA
-## 5   A   5 69        3    323.9        346    203.1      215.0    47.00       48.0
+## 5   A   5 69        3 323.9420        346 203.0580      215.0 47.00000       48.0
 ## 6   A   6 NA       NA       NA         NA       NA         NA       NA         NA
 </code></pre>
 
@@ -370,12 +370,12 @@ head(setupSummarized4[,1:10])
 ## Groups: row
 ## 
 ##   row col  n n.sorted mean.TOF median.TOF mean.EXT median.EXT mean.red median.red
-## 1   A   1 24        3    342.8        341    241.5      230.5    64.92       49.5
-## 2   A   3 70        3    307.2        310    190.9      209.5    62.61       52.0
-## 3   A   5 69        3    323.9        346    203.1      215.0    47.00       48.0
-## 4   A   7 64        3    301.4        285    185.6      202.0    54.28       46.5
-## 5   A   8  2        2    245.0        245    211.5      211.5    43.50       43.5
-## 6   A   9 82        3    324.0        356    190.7      205.5    44.24       47.0
+## 1   A   1 24        3 342.7917        341 241.4583      230.5 64.91667       49.5
+## 2   A   3 70        3 307.2143        310 190.8714      209.5 62.61429       52.0
+## 3   A   5 69        3 323.9420        346 203.0580      215.0 47.00000       48.0
+## 4   A   7 64        3 301.4062        285 185.5625      202.0 54.28125       46.5
+## 5   A   8  2        2 245.0000        245 211.5000      211.5 43.50000       43.5
+## 6   A   9 82        3 323.9756        356 190.7439      205.5 44.24390       47.0
 </code></pre>
 
 <p>The converse of the <code>removeWells</code> function is the <code>fillWells</code> function. This function fills the trait data for any wells missing from the selected data frame with <code>NA</code>s. If you want to fill the wells back in from our example above, where the rows were dropped from the data frame, we could use the following command:</p>
@@ -385,11 +385,11 @@ head(setupSummarized5[,1:10])
 </code></pre>
 
 <pre><code>##   row col  n n.sorted mean.TOF median.TOF mean.EXT median.EXT mean.red median.red
-## 1   A   1 24        3    342.8        341    241.5      230.5    64.92       49.5
+## 1   A   1 24        3 342.7917        341 241.4583      230.5 64.91667       49.5
 ## 2   A   2 NA       NA       NA         NA       NA         NA       NA         NA
-## 3   A   3 70        3    307.2        310    190.9      209.5    62.61       52.0
+## 3   A   3 70        3 307.2143        310 190.8714      209.5 62.61429       52.0
 ## 4   A   4 NA       NA       NA         NA       NA         NA       NA         NA
-## 5   A   5 69        3    323.9        346    203.1      215.0    47.00       48.0
+## 5   A   5 69        3 323.9420        346 203.0580      215.0 47.00000       48.0
 ## 6   A   6 NA       NA       NA         NA       NA         NA       NA         NA
 </code></pre>
 
@@ -398,10 +398,10 @@ head(setupSummarized5[,1:10])
 <pre><code class="r">edgeEffect(setupSummarized, &quot;n&quot;)
 </code></pre>
 
-<pre><code>## Warning: cannot compute exact p-value with ties
+<pre><code>## Warning in wilcox.test.default(total[, trait][which(pos == &quot;edge&quot;)], total[, : cannot compute exact p-value with ties
 </code></pre>
 
-<pre><code>## [1] 0.3775
+<pre><code>## [1] 0.3775308
 </code></pre>
 
 <p>This function takes a summarized plate data frame and the name of the trait to test. In this instance, we tested our setup plate for any effect with respect to the number of worms in each well. The function splits the plate population by wells found on the perimeter of the plate and those found on the interior, then performs a Wilcoxon Rank-Sum test between the two populations for the specified trait. The resultant p-value is returned. Since the returned p-value does not exceed our significance threshold of 0.05, we fail to reject the null hypothesis that the two populations are drawn from the same distribution. If we want to simultaneously test all traits, we can simply not specify a trait to be tested. A data frame of all traits and associated p-values will be returned.</p>
